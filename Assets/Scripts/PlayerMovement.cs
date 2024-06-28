@@ -16,24 +16,30 @@ public class PlayerMovement : MonoBehaviour
     private Animator animator;
     private Vector2 moveInput;
     private Rigidbody2D rb2d;
-    private CapsuleCollider2D myCapsuleCollider2D;
+    private CapsuleCollider2D myBodyCollider2D;
+    private BoxCollider2D myFeetCollider2D;
     private float startingGravity;
+    private bool isAlive = true;
 
     // Start is called before the first frame update
     void Start()
     {
         animator = GetComponent<Animator>();
         rb2d = GetComponent<Rigidbody2D>();
-        myCapsuleCollider2D = GetComponent<CapsuleCollider2D>();
+        myBodyCollider2D = GetComponent<CapsuleCollider2D>();
+        myFeetCollider2D = GetComponent<BoxCollider2D>();
         startingGravity = rb2d.gravityScale;
     }
 
     // Update is called once per frame
     void Update()
     {
-        Run();
-        FlipSprite();
-        ClimbLadder();
+        if (isAlive)
+        {
+            Run();
+            FlipSprite();
+            ClimbLadder();
+        }
     }
 
     private void Run()
@@ -54,7 +60,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void ClimbLadder()
     {
-        if (!myCapsuleCollider2D.IsTouchingLayers(LayerMask.GetMask("Climbing")))
+        if (!myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Climbing")))
         {
             rb2d.gravityScale = startingGravity;
             animator.SetBool("isClimbing", false);
@@ -69,13 +75,27 @@ public class PlayerMovement : MonoBehaviour
 
     void OnJump(InputValue value)
     {
-        if (myCapsuleCollider2D.IsTouchingLayers(LayerMask.GetMask("Ground")))
+        if (myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Ground")))
         {
             if (value.isPressed)
             {
                 rb2d.velocity += new Vector2(0f, jumpPower);
             }
         }
+    }
+
+    private void OnCollisionEnter2D(Collision2D other)
+    {
+        if (myBodyCollider2D.IsTouchingLayers(LayerMask.GetMask("Enemies")))
+        {
+            Debug.Log("Dying");
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        isAlive = false;
     }
 
     void OnMove(InputValue value)
