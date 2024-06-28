@@ -1,17 +1,16 @@
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
     [SerializeField]
-    private float movementSpeed = 1000.0f;
+    private float movementSpeed = 5f;
 
     [SerializeField]
-    private float jumpPower = 25f;
+    private float jumpPower = 10f;
 
     [SerializeField]
-    private float climbSpeed = 300.0f;
+    private float climbSpeed = 5f;
 
     private Animator animator;
     private Vector2 moveInput;
@@ -21,7 +20,6 @@ public class PlayerMovement : MonoBehaviour
     private float startingGravity;
     private bool isAlive = true;
 
-    // Start is called before the first frame update
     void Start()
     {
         animator = GetComponent<Animator>();
@@ -31,20 +29,27 @@ public class PlayerMovement : MonoBehaviour
         startingGravity = rb2d.gravityScale;
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (isAlive)
         {
-            Run();
             FlipSprite();
+            UpdateAnimations();
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (isAlive)
+        {
+            Run();
             ClimbLadder();
         }
     }
 
     private void Run()
     {
-        Vector2 playerVelocity = new(moveInput.x * movementSpeed * Time.deltaTime, rb2d.velocity.y);
+        Vector2 playerVelocity = new Vector2(moveInput.x * movementSpeed, rb2d.velocity.y);
         rb2d.velocity = playerVelocity;
     }
 
@@ -55,7 +60,19 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.localScale = new Vector2(Mathf.Sign(rb2d.velocity.x), 1f);
         }
+    }
+
+    private void UpdateAnimations()
+    {
+        bool playerHasHorizontalSpeed = Mathf.Abs(rb2d.velocity.x) > Mathf.Epsilon;
         animator.SetBool("isRunning", playerHasHorizontalSpeed);
+
+        bool playerHasVerticalSpeed = Mathf.Abs(rb2d.velocity.y) > Mathf.Epsilon;
+        animator.SetBool(
+            "isClimbing",
+            playerHasVerticalSpeed
+                && myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Climbing"))
+        );
     }
 
     private void ClimbLadder()
@@ -63,23 +80,24 @@ public class PlayerMovement : MonoBehaviour
         if (!myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Climbing")))
         {
             rb2d.gravityScale = startingGravity;
-            animator.SetBool("isClimbing", false);
             return;
         }
-        Vector2 climbVelocity = new(rb2d.velocity.x, moveInput.y * climbSpeed * Time.deltaTime);
+
+        Vector2 climbVelocity = new Vector2(rb2d.velocity.x, moveInput.y * climbSpeed);
         rb2d.velocity = climbVelocity;
         rb2d.gravityScale = 0f;
-        bool playerHasVerticalSpeed = Mathf.Abs(rb2d.velocity.y) > Mathf.Epsilon;
-        animator.SetBool("isClimbing", playerHasVerticalSpeed);
     }
 
     void OnJump(InputValue value)
     {
+        if (!isAlive)
+            return;
+
         if (myFeetCollider2D.IsTouchingLayers(LayerMask.GetMask("Ground")))
         {
             if (value.isPressed)
             {
-                rb2d.velocity += new Vector2(0f, jumpPower);
+                rb2d.velocity = new Vector2(rb2d.velocity.x, jumpPower);
             }
         }
     }
@@ -96,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
     private void Die()
     {
         isAlive = false;
+        rb2d.velocity = Vector2.zero;
     }
 
     void OnMove(InputValue value)
