@@ -12,6 +12,15 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField]
     private float climbSpeed = 5f;
 
+    [SerializeField]
+    private GameObject bullet;
+
+    [SerializeField]
+    private Transform gun;
+
+    [SerializeField]
+    private Vector2 deathKick = new Vector2(10f, 10f);
+
     private Animator animator;
     private Vector2 moveInput;
     private Rigidbody2D rb2d;
@@ -88,6 +97,37 @@ public class PlayerMovement : MonoBehaviour
         rb2d.gravityScale = 0f;
     }
 
+    private void OnCollisionEnter2D(Collision2D other)
+    {
+        if (myBodyCollider2D.IsTouchingLayers(LayerMask.GetMask("Enemies", "Hazards")))
+        {
+            Debug.Log("Dying");
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        isAlive = false;
+        rb2d.velocity = deathKick;
+        animator.SetTrigger("Dying");
+    }
+
+    void OnMove(InputValue value)
+    {
+        if (!isAlive)
+            return;
+        moveInput = value.Get<Vector2>();
+    }
+
+    void OnFire(InputValue value)
+    {
+        if (!isAlive)
+            return;
+
+        Instantiate(bullet, gun.position, transform.rotation);
+    }
+
     void OnJump(InputValue value)
     {
         if (!isAlive)
@@ -100,25 +140,5 @@ public class PlayerMovement : MonoBehaviour
                 rb2d.velocity = new Vector2(rb2d.velocity.x, jumpPower);
             }
         }
-    }
-
-    private void OnCollisionEnter2D(Collision2D other)
-    {
-        if (myBodyCollider2D.IsTouchingLayers(LayerMask.GetMask("Enemies")))
-        {
-            Debug.Log("Dying");
-            Die();
-        }
-    }
-
-    private void Die()
-    {
-        isAlive = false;
-        rb2d.velocity = Vector2.zero;
-    }
-
-    void OnMove(InputValue value)
-    {
-        moveInput = value.Get<Vector2>();
     }
 }
